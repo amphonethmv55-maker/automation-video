@@ -1,0 +1,307 @@
+services:
+
+  postgres:
+    image: postgres:16
+    container_name: automation-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - automation-net
+
+
+  redis:
+    image: redis:7-alpine
+    container_name: automation-redis
+    restart: unless-stopped
+
+    command: redis-server --appendonly yes
+
+    volumes:
+      - ./redis/data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - automation-net
+
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: automation-n8n
+    restart: unless-stopped
+
+    ports:
+      - "5678:5678"
+
+    environment:
+      TZ: ${TZ}
+      GENERIC_TIMEZONE: ${TZ}
+
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+
+      N8N_HOST: ${N8N_HOST}
+      N8N_PORT: ${N8N_PORT}
+      N8N_PROTOCOL: ${N8N_PROTOCOL}
+      N8N_UNVERIFIED_PACKAGES_ENABLED: ${N8N_UNVERIFIED_PACKAGES_ENABLED}
+      N8N_RUNNERS_TASK_TIMEOUT: ${N8N_RUNNERS_TASK_TIMEOUT}
+      N8N_COMPRESSION_NODE_MAX_DECOMPRESSED_SIZE_BYTES: ${N8N_COMPRESSION_NODE_MAX_DECOMPRESSED_SIZE_BYTES}
+      N8N_COMPRESSION_NODE_MAX_ZIP_ENTRIES: ${N8N_COMPRESSION_NODE_MAX_ZIP_ENTRIES}
+      N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE}
+
+    volumes:
+      - ./n8n/data:/home/node/.n8n
+      - ./storage:/data/storage
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    networks:
+      - automation-net
+
+
+  script-api:
+    build:
+      context: ./script-api
+      dockerfile: Dockerfile
+
+    container_name: automation-script-api
+    restart: unless-stopped
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - ./storage:/data/storage
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - automation-net
+  
+      
+  character-api:
+    build:
+      context: ./character-api
+      dockerfile: Dockerfile
+
+    container_name: automation-character-api
+    restart: unless-stopped
+
+    ports:
+      - "8001:8000"
+
+    volumes:
+      - ./characters:/data/characters:ro
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - automation-net    
+      
+      
+  image-api:
+    build:
+      context: ./image-api
+      dockerfile: Dockerfile
+
+    container_name: automation-image-api
+    restart: unless-stopped
+
+    ports:
+      - "8002:8000"
+    
+    environment:
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID}
+      IMAGE_PROVIDER: ${IMAGE_PROVIDER}
+      CLOUDFLARE_IMAGE_MODEL: ${CLOUDFLARE_IMAGE_MODEL}
+
+    volumes:
+      - ./storage:/data/storage
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - automation-net
+      
+  tts-api:
+    build:
+      context: ./tts-api
+      dockerfile: Dockerfile
+
+    container_name: automation-tts-api
+    restart: unless-stopped
+
+    ports:
+      - "8003:8000"
+      
+
+    volumes:
+      - ./storage:/data/storage
+      - ./tts-api/voices:/voices:ro
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - automation-net
+      
+  animation-api:
+    build:
+      context: ./animation-api
+      dockerfile: Dockerfile
+
+    container_name: automation-animation-api
+    restart: unless-stopped
+
+    ports:
+      - "8004:8000"
+
+    volumes:
+      - ./storage:/data/storage
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - automation-net
+      
+      
+  subtitle-api:
+    build:
+      context: ./subtitle-api
+      dockerfile: Dockerfile
+
+    container_name: automation-subtitle-api
+    restart: unless-stopped
+
+    ports:
+      - "8005:8000"
+
+    volumes:
+      - ./storage:/data/storage
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - automation-net
+      
+  media-api:
+    build:
+      context: ./media-api
+      dockerfile: Dockerfile
+
+    container_name: automation-media-api
+    restart: unless-stopped
+
+    ports:
+      - "8006:8000"
+
+    volumes:
+      - ./storage:/data/storage
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - automation-net
+
+networks:
+  automation-net:
+    name: automation-net
+    driver: bridge

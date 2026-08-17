@@ -1,0 +1,63 @@
+# ==========================================
+# Secrets / Environment
+# ==========================================
+.env
+.env.*
+!.env.example
+secrets/
+
+# ==========================================
+# Runtime Data
+# ==========================================
+backups/
+logs/
+storage/
+postgres/
+redis/
+
+# ==========================================
+# Python
+# ==========================================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+
+# ==========================================
+# Generated Media
+# ==========================================
+*.mp4
+*.mov
+*.avi
+*.wav
+*.mp3
+
+# ==========================================
+# Temporary files
+# ==========================================
+tmp/
+temp/
+*.tmp
+*.log
+
+# ==========================================
+# Windows / VS Code
+# ==========================================
+Thumbs.db
+Desktop.ini
+.vscode/
+
+# ==========================================
+# Local AI Models / Third-party Repositories
+# ==========================================
+animation-api/sadtalker/
+animation-api/wav2lip/
+
+# n8n runtime state (credentials, database state, logs, installed nodes)
+n8n/data/
+
+# Local TTS model weights; keep the small .json voice metadata tracked
+tts-api/voices/*.onnx
