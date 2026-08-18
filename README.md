@@ -81,6 +81,74 @@ notepad .env
 
 3. กำหนดค่า PostgreSQL, n8n และผู้ให้บริการสร้างภาพ ห้าม commit ไฟล์ `.env` หรือค่าลับขึ้น Git
 
+## Development และ Production
+
+โปรเจกต์ใช้ GitHub เป็นตัวกลางสำหรับนำโค้ดจาก Development ไป Production:
+
+```text
+Development Server (192.168.126.128)
+VS Code + Docker + n8n สำหรับพัฒนาและทดสอบ
+        |
+        | git push origin develop
+        v
+GitHub: amphonethmv55-maker/automation-video
+        |
+        | merge develop -> main
+        | git pull origin main
+        v
+Production Server (192.168.20.193)
+Docker Compose + n8n + APIs สำหรับใช้งานจริง
+```
+
+กำหนดหน้าที่ branch ดังนี้:
+
+- `develop` ใช้สำหรับพัฒนาและทดสอบบน `192.168.126.128`
+- `main` ใช้สำหรับ version ที่ผ่านการทดสอบและพร้อม deploy ไป `192.168.20.193`
+
+ไฟล์ `.env` ไม่ถูกส่งผ่าน GitHub แต่ละ Server ต้องมีไฟล์ของตัวเอง:
+
+```dotenv
+# Development Server
+N8N_HOST=192.168.126.128
+N8N_PROTOCOL=http
+N8N_SECURE_COOKIE=false
+```
+
+```dotenv
+# Production Server (ใช้ HTTP ภายใน LAN เท่านั้น)
+N8N_HOST=192.168.20.193
+N8N_PROTOCOL=http
+N8N_SECURE_COOKIE=false
+```
+
+### Development workflow
+
+```powershell
+git switch develop
+git pull origin develop
+
+# แก้โค้ดและทดสอบให้ผ่านก่อน
+docker compose up -d --build
+docker compose ps
+
+git add .
+git commit -m "Describe the development change"
+git push origin develop
+```
+
+### Production deployment
+
+หลังจาก review และ merge `develop` เข้า `main` แล้ว ให้รันบน Production Server:
+
+```powershell
+git switch main
+git pull origin main
+docker compose up -d --build
+docker compose ps
+```
+
+ห้ามแก้ source code โดยตรงบน Production Server เพราะการแก้จะไม่ถูกบันทึกกลับ GitHub และอาจถูกเขียนทับในการ deploy ครั้งต่อไป
+
 ค่าหลักที่ระบบใช้ประกอบด้วย:
 
 ```dotenv
