@@ -226,6 +226,7 @@ services:
 
     volumes:
       - ./storage:/data/storage
+      - ./characters:/data/characters:ro
 
     healthcheck:
       test:
@@ -238,6 +239,43 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+    networks:
+      - automation-net
+
+  sadtalker-api:
+    build:
+      context: ./sadtalker-api
+      dockerfile: Dockerfile
+
+    container_name: automation-sadtalker-api
+    restart: unless-stopped
+
+    ports:
+      - "8007:8000"
+
+    environment:
+      STORAGE_ROOT: /data/storage
+      SADTALKER_ROOT: /opt/sadtalker
+      SADTALKER_CHECKPOINT_DIR: /opt/sadtalker/checkpoints
+      SADTALKER_PROCESS_TIMEOUT_SECONDS: 3600
+
+    volumes:
+      - ./storage:/data/storage
+      - ./animation-api/sadtalker:/opt/sadtalker:ro
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
     networks:
       - automation-net

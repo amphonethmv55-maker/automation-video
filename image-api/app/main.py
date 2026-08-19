@@ -1,4 +1,5 @@
 import os
+import time
 from pathlib import Path
 
 import requests
@@ -31,6 +32,12 @@ CLOUDFLARE_IMAGE_MODEL = os.getenv(
     "CLOUDFLARE_IMAGE_MODEL",
     "@cf/black-forest-labs/flux-2-dev"
 )
+CLOUDFLARE_REQUEST_TIMEOUT = int(
+    os.getenv("CLOUDFLARE_REQUEST_TIMEOUT", "300")
+)
+CLOUDFLARE_MAX_ATTEMPTS = int(
+    os.getenv("CLOUDFLARE_MAX_ATTEMPTS", "3")
+)
 
 OUTPUT_DIR = Path("/data/storage/images")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -41,6 +48,7 @@ class ImageRequest(BaseModel):
     filename: str
     character_id: str
     scene_id: int
+    force: bool = False
 
 
 @app.get("/health")
@@ -53,15 +61,21 @@ def health():
         "cloudflare_model": CLOUDFLARE_IMAGE_MODEL,
         "gemini_configured": bool(GEMINI_API_KEY),
         "cloudflare_configured": bool(CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID),
+        "cloudflare_timeout_seconds": CLOUDFLARE_REQUEST_TIMEOUT,
+        "cloudflare_max_attempts": CLOUDFLARE_MAX_ATTEMPTS,
     }
 
 
-def save_image_bytes(filename: str, image_bytes: bytes) -> Path:
+def get_output_path(filename: str) -> Path:
     safe_filename = Path(filename).name
     if not safe_filename.lower().endswith(".png"):
         safe_filename += ".png"
 
-    output_path = OUTPUT_DIR / safe_filename
+    return OUTPUT_DIR / safe_filename
+
+
+def save_image_bytes(filename: str, image_bytes: bytes) -> Path:
+    output_path = get_output_path(filename)
 
     with open(output_path, "wb") as f:
         f.write(image_bytes)
@@ -132,17 +146,62 @@ def generate_with_cloudflare(prompt: str) -> bytes:
         "prompt": (None, prompt),
     }
 
-    response = requests.post(
-        url,
-        headers=headers,
-        files=files,
-        timeout=180
-    )
+    response = None
+
+    for attempt in range(1, CLOUDFLARE_MAX_ATTEMPTS + 1):
+        try:
+            response = requests.post(
+                url,
+                headers=headers,
+                files=files,
+                timeout=(10, CLOUDFLARE_REQUEST_TIMEOUT)
+            )
+        except requests.Timeout:
+            if attempt == CLOUDFLARE_MAX_ATTEMPTS:
+                raise HTTPException(
+                    status_code=504,
+                    detail=(
+                        "Cloudflare image generation timed out after "
+                        f"{CLOUDFLARE_MAX_ATTEMPTS} attempts"
+                    )
+                )
+
+            time.sleep(min(2 ** attempt, 10))
+            continue
+        except requests.RequestException as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Cloudflare connection failed: {exc.__class__.__name__}"
+            )
+
+        if response.status_code == 200:
+            break
+
+        if (
+            response.status_code in {429, 500, 502, 503, 504}
+            and attempt < CLOUDFLARE_MAX_ATTEMPTS
+        ):
+            time.sleep(min(2 ** attempt, 10))
+            continue
+
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "Cloudflare image generation failed with status "
+                f"{response.status_code}"
+            )
+        )
+
+    if response is None:
+        raise HTTPException(
+            status_code=502,
+            detail="Cloudflare image generation returned no response"
+        )
 
     if response.status_code != 200:
         raise HTTPException(
             status_code=502,
-            detail=f"Cloudflare image generation failed: {response.status_code} {response.text}"
+            detail=f"Cloudflare image generation failed with status {response.status_code}"
         )
 
     content_type = response.headers.get("content-type", "").lower()
@@ -185,6 +244,28 @@ def generate_with_cloudflare(prompt: str) -> bytes:
 @app.post("/generate-image")
 def generate_image(request: ImageRequest):
     try:
+        existing_path = get_output_path(request.filename)
+
+        if (
+            not request.force
+            and existing_path.exists()
+            and existing_path.stat().st_size > 0
+        ):
+            return {
+                "status": "cached",
+                "provider": IMAGE_PROVIDER,
+                "model": (
+                    CLOUDFLARE_IMAGE_MODEL
+                    if IMAGE_PROVIDER == "cloudflare"
+                    else GEMINI_IMAGE_MODEL
+                ),
+                "scene_id": request.scene_id,
+                "character_id": request.character_id,
+                "image_filename": existing_path.name,
+                "image_path": str(existing_path),
+                "size_bytes": existing_path.stat().st_size
+            }
+
         if IMAGE_PROVIDER == "cloudflare":
             image_bytes = generate_with_cloudflare(request.prompt)
             provider_used = "cloudflare"
