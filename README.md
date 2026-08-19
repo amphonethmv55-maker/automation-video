@@ -52,6 +52,7 @@ automation-video/
 | animation-api | `http://localhost:8004` | สร้าง animation |
 | subtitle-api | `http://localhost:8005` | สร้าง subtitle |
 | media-api | `http://localhost:8006` | render และรวมวิดีโอ |
+| sadtalker-api | `http://localhost:8007` | สร้าง talking-face animation ด้วย SadTalker |
 
 PostgreSQL และ Redis ใช้งานภายใน Docker network และไม่ได้เปิด port ออกสู่ host
 
@@ -249,6 +250,47 @@ workflow ที่ต้องการเก็บใน Git ควร export �
 - Script API ปัจจุบันคืนค่า script ตัวอย่างแบบคงที่
 - Publish API, prompts, infrastructure และ workflow exports ยังรอการพัฒนา
 - SadTalker และ Wav2Lip มีไฟล์อยู่ในเครื่องบาง environment แต่ยังไม่ได้เชื่อมกับ Dockerfile หรือ Animation API ปัจจุบัน
+- SadTalker API ใช้ CPU เป็นค่าเริ่มต้นและทำงานทีละ job เพื่อควบคุมการใช้หน่วยความจำ
+
+## SadTalker API
+
+SadTalker เป็น service แยกที่พอร์ต `8007` เพื่อสร้างการเคลื่อนไหวใบหน้าและริมฝีปากจากภาพกับเสียง โดยเก็บ `animation-api` เดิมไว้เป็น FFmpeg fallback
+
+Source และ model weights ของ SadTalker ไม่เข้า Git เพราะมีขนาดหลาย GB แต่ต้องมีอยู่ในตำแหน่งนี้บนแต่ละเครื่องก่อน build/run:
+
+```text
+animation-api/sadtalker/inference.py
+animation-api/sadtalker/checkpoints/SadTalker_V0.0.2_256.safetensors
+animation-api/sadtalker/checkpoints/SadTalker_V0.0.2_512.safetensors
+animation-api/sadtalker/checkpoints/mapping_00109-model.pth.tar
+animation-api/sadtalker/checkpoints/mapping_00229-model.pth.tar
+```
+
+Build และเปิดเฉพาะ SadTalker:
+
+```powershell
+docker compose up -d --build sadtalker-api
+Invoke-RestMethod "http://localhost:8007/health"
+```
+
+ตัวอย่าง request:
+
+```json
+{
+  "scene_id": 1,
+  "character_id": "firewall",
+  "image_path": "/data/storage/images/firewall_scene_1.png",
+  "audio_path": "/data/storage/audio/firewall_scene_1.wav",
+  "size": 256,
+  "preprocess": "full",
+  "still": false,
+  "pose_style": 0,
+  "expression_scale": 1.0,
+  "force": false
+}
+```
+
+CPU inference อาจใช้เวลาหลายนาทีต่อฉาก ควรทดสอบหนึ่งฉากก่อน และใช้ GPU worker แยกเมื่อขึ้น Production
 
 ## หมายเหตุด้านความปลอดภัย
 
