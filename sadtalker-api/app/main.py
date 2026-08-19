@@ -194,7 +194,9 @@ def animate_face(request: SadTalkerRequest):
         with inference_lock:
             result = subprocess.run(
                 command,
-                cwd=str(SADTALKER_ROOT),
+                # /app is writable for SadTalker's intermediate MP4 and has
+                # model-directory symlinks created by the Docker image.
+                cwd="/app",
                 capture_output=True,
                 text=True,
                 timeout=PROCESS_TIMEOUT_SECONDS,
