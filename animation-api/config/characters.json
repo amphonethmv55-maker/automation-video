@@ -1,22 +1,12 @@
 {
-  "firewall": {
-    "mouth": {
-      "x": 395,
-      "y": 610,
-      "w": 235,
-      "h": 75
-    },
-    "left_eye": {
-      "x": 225,
-      "y": 365,
-      "w": 285,
-      "h": 230
-    },
-    "right_eye": {
-      "x": 620,
-      "y": 350,
-      "w": 255,
-      "h": 230
-    }
-  }
+  "firewall": {"asset_path":"/data/characters/firewall/base.png","mouth_small_path":"/data/characters/firewall/mouth_small.png","mouth_wide_path":"/data/characters/firewall/mouth_wide.png","mouth":{"x":0.50,"y":0.51,"sprite_width":180}},
+  "switch": {"asset_path":"/data/characters/switch/base.png","mouth_small_path":"/data/characters/switch/mouth_small.png","mouth_wide_path":"/data/characters/switch/mouth_wide.png","mouth":{"x":0.50,"y":0.54,"sprite_width":175}},
+  "access-point": {"asset_path":"/data/characters/access-point/base.png","mouth_small_path":"/data/characters/access-point/mouth_small.png","mouth_wide_path":"/data/characters/access-point/mouth_wide.png","mouth":{"x":0.50,"y":0.53,"sprite_width":170}},
+  "router": {"asset_path":"/data/characters/router/base.png","mouth_small_path":"/data/characters/router/mouth_small.png","mouth_wide_path":"/data/characters/router/mouth_wide.png","mouth":{"x":0.50,"y":0.50,"sprite_width":175}},
+  "hacker": {"asset_path":"/data/characters/hacker/base.png","mouth_small_path":"/data/characters/hacker/mouth_small.png","mouth_wide_path":"/data/characters/hacker/mouth_wide.png","mouth":{"x":0.50,"y":0.49,"sprite_width":170}},
+  "sysadmin": {"asset_path":"/data/characters/sysadmin/base.png","mouth_small_path":"/data/characters/sysadmin/mouth_small.png","mouth_wide_path":"/data/characters/sysadmin/mouth_wide.png","mouth":{"x":0.50,"y":0.43,"sprite_width":155}},
+  "user": {"asset_path":"/data/characters/user/base.png","mouth_small_path":"/data/characters/user/mouth_small.png","mouth_wide_path":"/data/characters/user/mouth_wide.png","mouth":{"x":0.50,"y":0.43,"sprite_width":155}},
+  "lan-cable": {"asset_path":"/data/characters/lan-cable/base.png","mouth_small_path":"/data/characters/lan-cable/mouth_small.png","mouth_wide_path":"/data/characters/lan-cable/mouth_wide.png","mouth":{"x":0.50,"y":0.43,"sprite_width":160}},
+  "server": {"asset_path":"/data/characters/server/base.png","mouth_small_path":"/data/characters/server/mouth_small.png","mouth_wide_path":"/data/characters/server/mouth_wide.png","mouth":{"x":0.50,"y":0.43,"sprite_width":160}},
+  "cloud": {"asset_path":"/data/characters/cloud/base.png","mouth_small_path":"/data/characters/cloud/mouth_small.png","mouth_wide_path":"/data/characters/cloud/mouth_wide.png","mouth":{"x":0.50,"y":0.46,"sprite_width":165}}
 }

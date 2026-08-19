@@ -226,6 +226,7 @@ services:
 
     volumes:
       - ./storage:/data/storage
+      - ./characters:/data/characters:ro
 
     healthcheck:
       test:

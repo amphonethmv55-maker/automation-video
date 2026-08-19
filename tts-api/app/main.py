@@ -36,10 +36,7 @@ def health():
 def get_voice_model(character_id: str) -> Path:
     character_id = character_id.lower()
 
-    if character_id == "firewall":
-        return VOICE_DIR / "en_US-lessac-medium.onnx"
-
-    if character_id == "hacker":
+    if character_id in {"hacker", "switch", "access-point", "user", "lan-cable", "cloud"}:
         return VOICE_DIR / "en_US-ryan-medium.onnx"
 
     return VOICE_DIR / "en_US-lessac-medium.onnx"
@@ -77,6 +74,7 @@ def generate_voice(request: TTSRequest):
     )
 
     if result.returncode != 0:
+        output_path.unlink(missing_ok=True)
         raise HTTPException(
             status_code=500,
             detail=f"Piper failed: {result.stderr[-2000:]}"
